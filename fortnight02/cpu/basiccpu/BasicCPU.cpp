@@ -116,6 +116,11 @@ int BasicCPU::ID()
 			return decodeDataProcImm();
 			break;
 		// case TODO
+		case 0x1A000000:
+		case 0x0A000000:
+			fpOP = false;
+			return decodeDataProcReg();
+			break;
 		// x101 Data Processing -- Register on page C4-278
 		default:
 			return 1; // instrução não implementada
@@ -144,6 +149,7 @@ int BasicCPU::decodeDataProcImm() {
 	*/
 	switch (IR & 0xFF800000)
 	{
+
 		case 0xD1000000:
 			//1 1 0 SUB (immediate) - 64-bit variant on page C6-1199
 			
@@ -227,7 +233,43 @@ int BasicCPU::decodeDataProcReg() {
 	//				'add w1, w1, w0'
 	//		que aparece na linha 43 de isummation.S e no endereço 0x68
 	//		de txt_isummation.o.txt.
-	
+	unsigned int Rn, Rm, option, imm3;
+
+	switch (IR & 0xFFE00000)
+	{
+
+
+		case 0x8B000000:
+		case 0X0B000000:
+		
+			if (IR & 0x80000000) return 1;
+
+			Rn = (IR & 0x000003E0) >> 5;
+			A = getW(Rn);
+
+			int B_aux = getW((IR & 0x001F0000) >> 16);
+			
+			option = (IR & 0x0000E000) >> 13;
+			imm3 = (IR & 0x00001C00) >> 10;
+
+			switch(option){
+				case 0://LSL
+					B= B_aux << imm3;
+					break;
+				case 1://LSR
+					B=((unsigned long)B_aux) >> imm3;
+					break;
+				case 2://ASR
+					B=((signed long)B_aux) >> imm3;
+					break;
+				default:
+					return 1;
+			}
+
+			ALUctrl = ALUctrlFlag::ADD;
+
+			return 0;
+	}
 	
 	// instrução não implementada
 	return 1;
